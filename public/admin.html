@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin Control Panel | FixPoint</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- AUTH GUARD SCREEN -->
+<div id="guard" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-page,#f6f8fc)">
+  <div style="background:white;border-radius:18px;padding:52px 40px;text-align:center;max-width:420px;width:90%;box-shadow:0 16px 40px -8px rgba(14,23,46,0.12);border:1px solid #e2e8f4">
+    <div style="font-size:52px;margin-bottom:16px">🔐</div>
+    <h2 style="font-size:22px;font-weight:800;color:#0e172e;margin-bottom:8px">Verifying Access…</h2>
+    <p style="color:#5e6d8a;font-size:14px">Checking your administrator credentials.</p>
+  </div>
+</div>
+
+<!-- ADMIN PORTAL (revealed after auth) -->
+<div id="admin-app" style="display:none">
+  <div class="shell">
+    <aside class="side">
+      <div class="brand" style="padding:0 10px 28px">Fix<span>Point</span></div>
+
+      <div class="side-label">Admin Panel</div>
+      <button class="navitem active" id="nav-all">📋 All Complaints</button>
+      <button class="navitem" id="nav-stats">📊 Analytics</button>
+      <button class="navitem" id="nav-resolved">✅ Resolved</button>
+      <button class="navitem" id="nav-emails">📧 Email Logs & Services</button>
+      <button class="navitem" id="nav-users">👥 Staff Directory</button>
+
+      <button class="logout" id="logout">🚪 Sign out</button>
+    </aside>
+
+    <main class="content">
+      <div class="top">
+        <div>
+          <h1 id="page-title">Admin Control Panel ⚡</h1>
+          <p id="page-sub">Full campus maintenance oversight — assign technicians, resolve tickets, monitor metrics & email dispatches.</p>
+        </div>
+        <div class="avatar-badge">
+          <div class="avatar" id="admin-avatar">AD</div>
+          <div class="avatar-info">
+            <span class="avatar-name" id="admin-name">Administrator</span>
+            <span class="avatar-role" id="admin-role-email">⚡ Admin · admin@campus.edu</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div id="stats-row" style="margin-bottom:24px"></div>
+
+      <!-- Filter bar (hidden on Email logs view) -->
+      <div class="panel" id="filter-panel" style="margin-bottom:20px;overflow:visible">
+        <div style="padding:14px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div class="search-box" style="flex:1;min-width:220px;max-width:380px">
+            <span>🔍</span>
+            <input id="search_input" placeholder="Search title, location, requester…" oninput="applyFilters()">
+          </div>
+          <div class="filter-chips">
+            <button class="chip-btn active" data-status="all" onclick="setChip(this,'status')">All</button>
+            <button class="chip-btn" data-status="Open" onclick="setChip(this,'status')">Open</button>
+            <button class="chip-btn" data-status="In Progress" onclick="setChip(this,'status')">In Progress</button>
+            <button class="chip-btn" data-status="Closed" onclick="setChip(this,'status')">Resolved</button>
+          </div>
+          <select class="category-filter" id="cat_filter" onchange="applyFilters()">
+            <option value="all">All Categories</option>
+            <option>Electrical</option><option>Plumbing</option><option>Furniture</option>
+            <option>HVAC</option><option>Cleaning</option><option>General</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Requests panel / Dynamic content -->
+      <section class="panel" id="requests-panel">
+        <div class="panelhead">
+          <h2 id="main-panel-title">Campus Maintenance Tickets <span class="panel-count" id="req-count"></span></h2>
+          <div id="panel-actions">
+            <button class="add" onclick="exportCSV()">⬇️ Export CSV</button>
+          </div>
+        </div>
+        <div id="requests-list">
+          <div class="empty">Loading…</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- EMAIL PREVIEW MODAL -->
+<div id="email-modal" style="display:none;position:fixed;inset:0;background:rgba(14,23,46,0.75);backdrop-filter:blur(5px);z-index:9999;place-items:center;padding:20px" onclick="closeEmailModal()">
+  <div class="email-frame-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid #e2e8f4;padding-bottom:12px">
+      <div>
+        <h3 id="em-modal-subject" style="font-size:16px;font-weight:700;color:#0e172e;margin-bottom:2px"></h3>
+        <p id="em-modal-to" style="font-size:12.5px;color:#5e6d8a;"></p>
+      </div>
+      <button class="cancel" onclick="closeEmailModal()" style="padding:6px 14px">✕ Close</button>
+    </div>
+    <div id="em-modal-body" style="border:1px solid #e2e8f4;border-radius:10px;overflow:hidden;background:#0b1329"></div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(14,23,46,0.75);backdrop-filter:blur(5px);z-index:9999;place-items:center;padding:20px" onclick="closeLightbox()">
+  <div class="lightbox-box" onclick="event.stopPropagation()">
+    <img id="lb-img" src="" class="lightbox-img" alt="Problem photo">
+    <div class="lightbox-caption">
+      <span id="lb-title"></span>
+      <button class="cancel" onclick="closeLightbox()" style="padding:6px 14px">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+const TOKEN_KEY = 'token';
+let token = localStorage.getItem(TOKEN_KEY) || '';
+let adminUser = null;
+let allRequests = [];
+let allStaff = [];
+let allEmails = [];
+let statusFilter = 'all';
+
+const api = async (url, opts = {}) => {
+  const res = await fetch('/api' + url, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, ...(opts.headers || {}) }
+  });
+  const d = await res.json();
+  if (!res.ok) throw new Error(d.error || 'Request failed');
+  return d;
+};
+
+const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icons = { Electrical:'⚡', Plumbing:'🚰', Furniture:'🪑', HVAC:'❄️', Cleaning:'🧹', General:'📌', Other:'🔧' };
+
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${type === 'success' ? '✅' : 'ℹ️'}</span> <span>${esc(msg)}</span>`;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(10px)'; t.style.transition = 'all 0.2s'; setTimeout(() => t.remove(), 200); }, 3500);
+}
+
+function showDenied(msg) {
+  document.getElementById('guard').innerHTML = `
+    <div style="background:white;border-radius:18px;padding:52px 40px;text-align:center;max-width:420px;width:90%;box-shadow:0 16px 40px -8px rgba(14,23,46,0.12);border:1px solid #fee2e2">
+      <div style="font-size:52px;margin-bottom:16px">🚫</div>
+      <h2 style="font-size:22px;font-weight:800;color:#dc2626;margin-bottom:10px">Access Denied</h2>
+      <p style="color:#5e6d8a;font-size:14px;line-height:1.6">${msg}<br><br>Only <b>administrators</b> can access this control panel.</p>
+      <a href="/" style="display:inline-block;margin-top:20px;padding:12px 28px;background:#3b66ff;color:white;border-radius:8px;font-weight:700;text-decoration:none">← Back to Login</a>
+    </div>`;
+}
+
+async function checkAccess() {
+  if (!token) return showDenied('No session found. Please log in first.');
+  try {
+    const { user } = await api('/me');
+    if (!user || user.role !== 'admin') return showDenied(`You are signed in as <b>${user?.name || 'unknown'}</b> (${user?.role || 'unknown role'}).<br>This portal requires administrator access.`);
+    adminUser = user;
+    document.getElementById('admin-avatar').textContent = user.name.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    document.getElementById('admin-name').textContent = user.name;
+    document.getElementById('admin-role-email').textContent = `⚡ Admin · ${user.email || 'admin@campus.edu'}`;
+    document.getElementById('guard').style.display = 'none';
+    document.getElementById('admin-app').style.display = 'block';
+    loadAll();
+  } catch (e) {
+    showDenied('Session expired or invalid. Please log in again.');
+  }
+}
+
+async function loadAll() {
+  setActiveNav('nav-all');
+  document.getElementById('filter-panel').style.display = 'block';
+  document.getElementById('page-sub').textContent = 'All campus maintenance complaints — assign, update, and resolve.';
+  document.getElementById('main-panel-title').innerHTML = 'Campus Maintenance Tickets <span class="panel-count" id="req-count"></span>';
+  document.getElementById('panel-actions').innerHTML = '<button class="add" onclick="exportCSV()">⬇️ Export CSV</button>';
+  
+  const [summary, rows, staff] = await Promise.all([
+    api('/dashboard-summary').catch(() => ({ stats: {}, totalEmails: 0 })),
+    api('/requests'),
+    api('/staff')
+  ]);
+  allRequests = rows;
+  allStaff = staff;
+  renderStatsRow(rows, summary.totalEmails || 0);
+  renderRequests(applyFilters());
+}
+
+async function loadResolved() {
+  setActiveNav('nav-resolved');
+  document.getElementById('filter-panel').style.display = 'block';
+  document.getElementById('page-sub').textContent = 'Complaints that have been resolved and closed.';
+  document.getElementById('main-panel-title').innerHTML = 'Resolved Complaints <span class="panel-count" id="req-count"></span>';
+  document.getElementById('panel-actions').innerHTML = '<button class="add" onclick="exportCSV()">⬇️ Export CSV</button>';
+  
+  allRequests = await api('/requests');
+  statusFilter = 'Closed';
+  document.querySelectorAll('[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === 'Closed'));
+  renderStatsRow(allRequests);
+  renderRequests(applyFilters());
+}
+
+async function loadStats() {
+  setActiveNav('nav-stats');
+  document.getElementById('filter-panel').style.display = 'none';
+  document.getElementById('page-sub').textContent = 'Campus maintenance analytics and category distribution.';
+  document.getElementById('stats-row').innerHTML = '';
+  document.getElementById('main-panel-title').innerHTML = 'Maintenance Analytics';
+  document.getElementById('panel-actions').innerHTML = '';
+
+  const s = await api('/stats');
+  document.getElementById('requests-list').innerHTML = `
+    <div style="padding:28px">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:28px">
+        <div class="card card-total"><div class="card-head"><span class="label">Total</span><span class="icon-chip">📋</span></div><div class="num">${s.total}</div></div>
+        <div class="card card-open"><div class="card-head"><span class="label">Open</span><span class="icon-chip">⏳</span></div><div class="num">${s.open}</div></div>
+        <div class="card card-prog"><div class="card-head"><span class="label">In Progress</span><span class="icon-chip">⚡</span></div><div class="num">${s.in_progress}</div></div>
+        <div class="card card-closed"><div class="card-head"><span class="label">Resolved</span><span class="icon-chip">✅</span></div><div class="num">${s.closed}</div></div>
+        <div class="card card-total" style="border-left:4px solid #3b82f6"><div class="card-head"><span class="label">Emails Sent</span><span class="icon-chip">📧</span></div><div class="num">${s.total_emails || 0}</div></div>
+      </div>
+      <h3 style="font-weight:800;font-size:17px;color:#0e172e;margin-bottom:18px">Category Distribution</h3>
+      ${s.categories.map(x => {
+        const pct = s.total > 0 ? Math.round((x.count / s.total) * 100) : 0;
+        return `<div style="margin-bottom:18px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:6px">
+            <span>${icons[x.category] || '📌'} ${esc(x.category)}</span>
+            <span style="color:#5e6d8a">${x.count} requests · ${pct}%</span>
+          </div>
+          <div style="background:#f1f5f9;height:10px;border-radius:10px;overflow:hidden">
+            <div style="background:linear-gradient(90deg,#3b66ff,#60a5fa);height:100%;width:${pct}%;border-radius:10px;transition:width 0.6s ease"></div>
+          </div>
+        </div>`;
+      }).join('') || '<div class="empty">No data yet.</div>'}
+    </div>`;
+}
+
+async function loadEmails() {
+  setActiveNav('nav-emails');
+  document.getElementById('filter-panel').style.display = 'none';
+  document.getElementById('page-sub').textContent = 'Transactional email notification logs, SMTP delivery status, and diagnostic tools.';
+  document.getElementById('stats-row').innerHTML = '';
+  document.getElementById('main-panel-title').innerHTML = 'Email Notification Audit Logs <span class="panel-count" id="req-count"></span>';
+  document.getElementById('panel-actions').innerHTML = `
+    <button class="add" style="background:#0284c7" onclick="sendTestEmail()">🚀 Send Test Email</button>
+  `;
+
+  document.getElementById('requests-list').innerHTML = '<div class="empty">Fetching email logs…</div>';
+
+  try {
+    const { emails, total } = await api('/email-logs');
+    allEmails = emails;
+    const reqCnt = document.getElementById('req-count');
+    if (reqCnt) reqCnt.textContent = total + ' emails';
+
+    if (!emails.length) {
+      document.getElementById('requests-list').innerHTML = `
+        <div class="email-service-banner" style="margin:20px">
+          <div class="email-service-status">
+            <span class="status-dot"></span>
+            <span>Email Notification Service: <b>Active & Ready</b></span>
+          </div>
+          <button class="add" onclick="sendTestEmail()" style="padding:6px 16px;font-size:12.5px">Send Test Email</button>
+        </div>
+        <div class="empty">No emails have been dispatched yet. Report or assign a ticket to see live email logs!</div>`;
+      return;
+    }
+
+    document.getElementById('requests-list').innerHTML = `
+      <div style="padding:20px">
+        <div class="email-service-banner">
+          <div class="email-service-status">
+            <span class="status-dot"></span>
+            <span>Admin Email: <b>${esc(adminUser?.email || 'admin@campus.edu')}</b></span>
+            <button class="action" onclick="promptUpdateEmail()" style="padding:4px 10px;font-size:11.5px;margin-left:8px">✏️ Change Email</button>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <span style="font-size:12px;color:#5e6d8a">Sender: <b>maintenance@campus.edu</b></span>
+            <button class="add" onclick="sendTestEmail()" style="padding:6px 14px;font-size:12px">Test Email</button>
+          </div>
+        </div>
+
+        <div style="border:1px solid #e2e8f4;border-radius:12px;overflow:hidden">
+          ${emails.map((em, idx) => {
+            const tagClass = em.event_type === 'ticket_created' ? 'tag-created'
+                           : em.event_type === 'ticket_assigned' ? 'tag-assigned'
+                           : em.event_type === 'ticket_resolved' ? 'tag-resolved' : 'tag-test';
+            return `
+              <div class="email-log-item">
+                <div class="email-info" style="flex:1">
+                  <h4>${esc(em.subject)}</h4>
+                  <div class="email-meta">
+                    <span class="email-tag ${tagClass}">${esc(em.event_type.replace('_',' '))}</span>
+                    <span>To: <b>${esc(em.recipient)}</b></span>
+                    <span>Delivery: <b style="color:${em.status==='Sent'?'#10b981':'#3b82f6'}">${esc(em.status)}</b></span>
+                    <span>🕒 ${new Date(em.created_at).toLocaleString()}</span>
+                  </div>
+                </div>
+                <div>
+                  <button class="btn-preview-email" onclick="viewEmailModal(${idx})">👁️ Preview Email</button>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  } catch (err) {
+    document.getElementById('requests-list').innerHTML = `<div class="empty" style="color:#dc2626">Failed to load email logs: ${esc(err.message)}</div>`;
+  }
+}
+
+async function sendTestEmail() {
+  try {
+    showToast('Sending test email…', 'info');
+    const res = await api('/send-test-email', { method: 'POST', body: JSON.stringify({ username: adminUser.username }) });
+    showToast('Test email dispatched to ' + (res.user?.email || 'admin@campus.edu'));
+    if (document.getElementById('nav-emails').classList.contains('active')) {
+      loadEmails();
+    }
+  } catch (err) {
+    alert('Test email error: ' + err.message);
+  }
+}
+
+async function promptUpdateEmail() {
+  const newEmail = prompt('Enter the administrator notification email address:', adminUser.email || '');
+  if (!newEmail || !newEmail.includes('@')) return;
+  try {
+    const res = await api('/me/email', { method: 'PATCH', body: JSON.stringify({ email: newEmail.trim() }) });
+    adminUser.email = res.user.email;
+    showToast('Admin notification email updated to ' + res.user.email);
+    document.getElementById('admin-role-email').textContent = `⚡ Admin · ${res.user.email}`;
+    loadEmails();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function viewEmailModal(idx) {
+  const em = allEmails[idx];
+  if (!em) return;
+  document.getElementById('em-modal-subject').textContent = em.subject;
+  document.getElementById('em-modal-to').textContent = `To: ${em.recipient} | Event: ${em.event_type} | Sent: ${new Date(em.created_at).toLocaleString()}`;
+  document.getElementById('em-modal-body').innerHTML = `
+    <iframe srcdoc="${esc(em.body).replace(/"/g, '&quot;')}" style="width:100%;height:450px;border:none;"></iframe>
+  `;
+  document.getElementById('email-modal').style.display = 'grid';
+}
+function closeEmailModal() {
+  document.getElementById('email-modal').style.display = 'none';
+  document.getElementById('em-modal-body').innerHTML = '';
+}
+
+async function loadUsers() {
+  setActiveNav('nav-users');
+  document.getElementById('filter-panel').style.display = 'none';
+  document.getElementById('page-sub').textContent = 'All registered campus users, roles, and maintenance personnel.';
+  document.getElementById('stats-row').innerHTML = '';
+  document.getElementById('main-panel-title').innerHTML = 'Staff & User Directory <span class="panel-count" id="req-count"></span>';
+  document.getElementById('panel-actions').innerHTML = '';
+
+  const staff = await api('/staff');
+  const reqStaff = document.getElementById('req-count');
+  if (reqStaff) reqStaff.textContent = staff.length + ' staff';
+  document.getElementById('requests-list').innerHTML = `
+    <div style="padding:24px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px">
+        ${staff.map(u => `
+          <div style="background:#f8fafc;border:1px solid #e2e8f4;border-radius:12px;padding:20px;text-align:center">
+            <div style="width:52px;height:52px;background:linear-gradient(135deg,#3b66ff,#1d4ed8);border-radius:50%;display:grid;place-items:center;color:white;font-weight:700;font-size:18px;margin:0 auto 12px">${u.name.split(' ').map(x=>x[0]).join('').slice(0,2)}</div>
+            <div style="font-weight:700;color:#0e172e">${esc(u.name)}</div>
+            <div style="font-size:12px;font-weight:600;color:#3b66ff;margin-top:4px">🛠️ Maintenance Staff</div>
+            <div style="font-size:12px;color:#5e6d8a;margin-top:4px;font-family:monospace">@${esc(u.username)}</div>
+            <div style="font-size:12px;color:#047857;margin-top:4px;background:#ecfdf5;display:inline-block;padding:2px 8px;border-radius:10px">📧 ${esc(u.email || u.username + '@campus.edu')}</div>
+            <div style="margin-top:14px">
+              <button onclick="localStorage.setItem('token','token-${esc(u.username)}');window.location.href='/maintenance.html';" style="padding:6px 14px;background:#3b66ff;color:white;border:none;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer">
+                🛠️ Open Portal as ${esc(u.name.split(' ')[0])}
+              </button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function setActiveNav(id) {
+  document.querySelectorAll('.navitem').forEach(b => b.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+function setChip(el, type) {
+  el.closest('.filter-chips').querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  statusFilter = el.dataset.status || 'all';
+  renderRequests(applyFilters());
+}
+
+function applyFilters() {
+  const q = (document.getElementById('search_input')?.value || '').toLowerCase();
+  const cat = document.getElementById('cat_filter')?.value || 'all';
+  return allRequests.filter(r => {
+    if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+    if (cat !== 'all' && r.category !== cat) return false;
+    if (q) {
+      const hay = `${r.title} ${r.location} ${r.requester} ${r.description}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderStatsRow(rows, totalEmails = 0) {
+  const open = rows.filter(r => r.status === 'Open').length;
+  const prog = rows.filter(r => r.status === 'In Progress').length;
+  const closed = rows.filter(r => r.status === 'Closed').length;
+  document.getElementById('stats-row').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px">
+      <div class="card card-total" onclick="setStatusFilter('all')"><div class="card-head"><span class="label">Total Complaints</span><span class="icon-chip">📋</span></div><div class="num">${rows.length}</div><div class="hint">View all</div></div>
+      <div class="card card-open" onclick="setStatusFilter('Open')"><div class="card-head"><span class="label">Open / Pending</span><span class="icon-chip">⏳</span></div><div class="num">${open}</div><div class="hint">Filter open</div></div>
+      <div class="card card-prog" onclick="setStatusFilter('In Progress')"><div class="card-head"><span class="label">In Progress</span><span class="icon-chip">⚡</span></div><div class="num">${prog}</div><div class="hint">Filter active</div></div>
+      <div class="card card-closed" onclick="setStatusFilter('Closed')"><div class="card-head"><span class="label">Resolved</span><span class="icon-chip">✅</span></div><div class="num">${closed}</div><div class="hint">Filter resolved</div></div>
+      <div class="card card-total" onclick="loadEmails()" style="border-left:4px solid #3b82f6;cursor:pointer"><div class="card-head"><span class="label">Emails Sent</span><span class="icon-chip">📧</span></div><div class="num">${totalEmails}</div><div class="hint">View email logs</div></div>
+    </div>`;
+}
+
+function setStatusFilter(s) {
+  statusFilter = s;
+  document.querySelectorAll('[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === s));
+  renderRequests(applyFilters());
+}
+
+function renderRequests(rows) {
+  const reqCnt = document.getElementById('req-count');
+  if (reqCnt) reqCnt.textContent = rows.length + ' tickets';
+  if (!rows.length) {
+    document.getElementById('requests-list').innerHTML = '<div class="empty" style="padding:48px">🔍 No matching maintenance requests.</div>';
+    return;
+  }
+  document.getElementById('requests-list').innerHTML = `
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Complaint</th><th>Location</th><th>Priority</th><th>Status</th><th>By</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>
+                <div class="title">#${r.id} · ${esc(r.title)}</div>
+                <div class="tiny">${icons[r.category] || '📌'} ${esc(r.category)}</div>
+                ${r.image_url ? `<button class="photo-btn" onclick="viewPhoto('${esc(r.image_url)}','${esc(r.title)}')">📷 View Photo</button>` : ''}
+              </td>
+              <td><div style="display:flex;align-items:center;gap:5px;font-weight:600">📍 ${esc(r.location)}</div></td>
+              <td><span class="badge ${esc(r.priority)}">${esc(r.priority)}</span></td>
+              <td><span class="badge ${esc(r.status)}">${esc(r.status)}</span></td>
+              <td><b>${esc(r.requester)}</b></td>
+              <td>
+                <div class="actions" style="gap:6px;flex-wrap:wrap">
+                  <select id="st_${r.id}" style="padding:5px 8px;border:1.5px solid #e2e8f4;border-radius:7px;font-size:12px;font-weight:600;background:white">
+                    ${['Open','In Progress','Closed'].map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}
+                  </select>
+                  <select id="asgn_${r.id}" style="padding:5px 8px;border:1.5px solid #e2e8f4;border-radius:7px;font-size:12px;font-weight:600;background:white">
+                    <option value="">Unassigned</option>
+                    ${allStaff.map(x=>`<option value="${esc(x.username)}" ${x.username===r.assigned_to?'selected':''}>${esc(x.name)}</option>`).join('')}
+                  </select>
+                  <button class="action" onclick="saveRequest(${r.id})">💾 Save</button>
+                  ${r.status !== 'Closed' ? `<button class="action" style="background:#ecfdf5;color:#047857;border-color:#bbf7d0" onclick="resolveRequest(${r.id})">✅ Resolve</button>` : ''}
+                </div>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function saveRequest(id) {
+  const status = document.getElementById('st_' + id).value;
+  const assigned_to = document.getElementById('asgn_' + id).value;
+  try {
+    await api('/requests/' + id, { method: 'PATCH', body: JSON.stringify({ status, assigned_to }) });
+    showToast('Ticket #' + id + ' updated! Notification & email dispatched.');
+    loadAll();
+  } catch (e) { alert(e.message); }
+}
+
+async function resolveRequest(id) {
+  if (!confirm('Mark complaint #' + id + ' as Resolved? The requester will receive an automated notification and resolution email.')) return;
+  try {
+    await api('/requests/' + id, { method: 'PATCH', body: JSON.stringify({ status: 'Closed' }) });
+    showToast('Complaint #' + id + ' resolved. Email notice dispatched!');
+    loadAll();
+  } catch (e) { alert(e.message); }
+}
+
+function viewPhoto(url, title) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lb-img').src = url;
+  document.getElementById('lb-title').textContent = title;
+  lb.style.display = 'grid';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
+
+function exportCSV() {
+  const rows = applyFilters();
+  const header = 'ID,Title,Location,Category,Priority,Status,Requester,Assigned To,Date\n';
+  const body = rows.map(r => [r.id, `"${r.title}"`, `"${r.location}"`, r.category, r.priority, r.status, r.requester, r.assigned_to || '', r.created_at].join(',')).join('\n');
+  const blob = new Blob([header + body], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'campus_maintenance_report.csv';
+  a.click();
+}
+
+document.getElementById('nav-all').onclick = loadAll;
+document.getElementById('nav-stats').onclick = loadStats;
+document.getElementById('nav-resolved').onclick = loadResolved;
+document.getElementById('nav-emails').onclick = loadEmails;
+document.getElementById('nav-users').onclick = loadUsers;
+document.getElementById('logout').onclick = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userRole');
+  window.location.href = '/';
+};
+
+checkAccess();
+</script>
+</body>
+</html>

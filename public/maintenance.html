@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Maintenance Staff Portal | FixPoint</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- AUTH GUARD -->
+<div id="guard" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-page,#f6f8fc)">
+  <div style="background:white;border-radius:18px;padding:52px 40px;text-align:center;max-width:420px;width:90%;box-shadow:0 16px 40px -8px rgba(14,23,46,0.12);border:1px solid #e2e8f4">
+    <div style="font-size:52px;margin-bottom:16px">🛠️</div>
+    <h2 style="font-size:22px;font-weight:800;color:#0e172e;margin-bottom:8px">Verifying Access…</h2>
+    <p style="color:#5e6d8a;font-size:14px">Checking your maintenance staff credentials.</p>
+  </div>
+</div>
+
+<!-- MAINTENANCE PORTAL -->
+<div id="maint-app" style="display:none">
+  <div class="shell">
+    <aside class="side">
+      <div class="brand" style="padding:0 10px 28px">Fix<span>Point</span></div>
+      <div class="side-label">Staff Menu</div>
+
+      <!-- Quick Switch Staff Widget -->
+      <div style="margin:0 10px 16px;padding:12px;background:rgba(255,255,255,0.06);border-radius:10px;border:1px solid rgba(255,255,255,0.1)">
+        <div style="font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px">Active Technician</div>
+        <div style="font-size:13px;font-weight:700;color:#ffffff;margin-bottom:8px" id="side-tech-name">Ravi Kumar</div>
+        <button type="button" onclick="toggleOtherStaff()" style="width:100%;background:#3b82f6;color:#ffffff;border:none;padding:6px 8px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px">
+          <span>🔄</span> Switch to <span id="side-other-tech">Priya</span>
+        </button>
+      </div>
+
+      <button class="navitem active" id="nav-assigned">🛠️ My Assignments</button>
+      <button class="navitem" id="nav-all">📋 All Open Tickets</button>
+      <button class="navitem" id="nav-done">✅ Completed Work</button>
+      <button class="navitem" id="nav-emails">📧 Work Order Emails</button>
+      <button class="logout" id="logout">🚪 Sign out</button>
+    </aside>
+
+    <main class="content">
+      <div class="top">
+        <div>
+          <h1 id="page-title">Maintenance Work Queue</h1>
+          <p id="page-sub">Your assigned campus repairs and real-time work order dispatches.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;background:#eef2ff;border:1.5px solid #c7d2fe;padding:5px 12px;border-radius:12px;gap:8px">
+            <span style="font-size:12px;font-weight:700;color:#4338ca;display:flex;align-items:center;gap:4px">
+              <span>🔄</span> Staff:
+            </span>
+            <select id="staff-select" onchange="switchStaff(this.value)" style="border:1px solid #c7d2fe;background:#ffffff;padding:5px 10px;border-radius:8px;font-size:12.5px;font-weight:700;color:#1e293b;cursor:pointer;outline:none">
+              <option value="maint1">🛠️ Ravi Kumar (maint1)</option>
+              <option value="maint2">🔧 Priya Das (maint2)</option>
+            </select>
+          </div>
+
+          <div class="avatar-badge">
+            <div class="avatar" id="maint-avatar">M</div>
+            <div class="avatar-info">
+              <span class="avatar-name" id="maint-name">Technician</span>
+              <span class="avatar-role" id="maint-role-email">🛠️ Staff · maint1@campus.edu</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="stats-row" style="margin-bottom:24px"></div>
+
+      <section class="panel" id="main-panel">
+        <div class="panelhead">
+          <h2><span id="panel-title">Assigned Tickets</span> <span class="panel-count" id="req-count"></span></h2>
+          <div id="panel-actions"></div>
+        </div>
+        <div id="requests-list"><div class="empty">Loading…</div></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- EMAIL PREVIEW MODAL -->
+<div id="email-modal" style="display:none;position:fixed;inset:0;background:rgba(14,23,46,0.75);backdrop-filter:blur(5px);z-index:9999;place-items:center;padding:20px" onclick="closeEmailModal()">
+  <div class="email-frame-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid #e2e8f4;padding-bottom:12px">
+      <div>
+        <h3 id="em-modal-subject" style="font-size:16px;font-weight:700;color:#0e172e;margin-bottom:2px"></h3>
+        <p id="em-modal-to" style="font-size:12.5px;color:#5e6d8a;"></p>
+      </div>
+      <button class="cancel" onclick="closeEmailModal()" style="padding:6px 14px">✕ Close</button>
+    </div>
+    <div id="em-modal-body" style="border:1px solid #e2e8f4;border-radius:10px;overflow:hidden;background:#0b1329"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+const TOKEN_KEY = 'token';
+let token = localStorage.getItem(TOKEN_KEY) || '';
+let currentUser = null;
+let allRequests = [];
+let myEmails = [];
+
+const api = async (url, opts = {}) => {
+  const res = await fetch('/api' + url, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, ...(opts.headers || {}) }
+  });
+  const d = await res.json();
+  if (!res.ok) throw new Error(d.error || 'Request failed');
+  return d;
+};
+
+const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icons = { Electrical:'⚡', Plumbing:'🚰', Furniture:'🪑', HVAC:'❄️', Cleaning:'🧹', General:'📌', Other:'🔧' };
+function timeAgo(d) { if(!d)return''; const s=Math.floor((new Date()-new Date(d))/1000); if(s<60)return'Just now'; const m=Math.floor(s/60); if(m<60)return m+'m ago'; const h=Math.floor(m/60); if(h<24)return h+'h ago'; return new Date(d).toLocaleDateString(); }
+
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${type==='success'?'✅':'ℹ️'}</span> <span>${esc(msg)}</span>`;
+  c.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),200); },3500);
+}
+
+function showDenied(msg) {
+  document.getElementById('guard').innerHTML = `
+    <div style="background:white;border-radius:18px;padding:52px 40px;text-align:center;max-width:420px;width:90%;box-shadow:0 16px 40px -8px rgba(14,23,46,0.12);border:1px solid #fee2e2">
+      <div style="font-size:52px;margin-bottom:16px">🚫</div>
+      <h2 style="font-size:22px;font-weight:800;color:#dc2626;margin-bottom:10px">Access Denied</h2>
+      <p style="color:#5e6d8a;font-size:14px;line-height:1.6">${msg}<br><br>Please log in with a <b>maintenance staff account</b>.</p>
+      <a href="/" style="display:inline-block;margin-top:20px;padding:12px 28px;background:#3b66ff;color:white;border-radius:8px;font-weight:700;text-decoration:none">← Back to Login</a>
+    </div>`;
+}
+
+async function checkAccess() {
+  if (!token) return showDenied('No active session found.');
+  try {
+    const { user } = await api('/me');
+    if (!user || user.role !== 'maintenance') return showDenied(`Signed in as <b>${user?.name}</b> (${user?.role}).<br>This portal is for maintenance staff only.`);
+    currentUser = user;
+    document.getElementById('maint-avatar').textContent = user.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('maint-name').textContent = user.name;
+    document.getElementById('maint-role-email').textContent = `🛠️ Staff · ${user.email || user.username + '@campus.edu'}`;
+    document.getElementById('page-title').textContent = `Welcome, ${user.name.split(' ')[0]} 🛠️`;
+
+    // Update staff switcher widgets
+    const sel = document.getElementById('staff-select');
+    if (sel) sel.value = user.username;
+    const sideName = document.getElementById('side-tech-name');
+    if (sideName) sideName.textContent = user.name;
+    const sideOther = document.getElementById('side-other-tech');
+    if (sideOther) sideOther.textContent = user.username === 'maint1' ? 'Priya Das' : 'Ravi Kumar';
+
+    document.getElementById('guard').style.display = 'none';
+    document.getElementById('maint-app').style.display = 'block';
+    loadAssigned();
+  } catch (e) {
+    showDenied('Session error. Please log in again.');
+  }
+}
+
+function switchStaff(targetUser) {
+  if (targetUser === currentUser?.username) return;
+  token = 'token-' + targetUser;
+  localStorage.setItem(TOKEN_KEY, token);
+  showToast(`Switched staff profile to ${targetUser === 'maint2' ? 'Priya Das (maint2)' : 'Ravi Kumar (maint1)'}!`, 'info');
+  checkAccess();
+}
+
+function toggleOtherStaff() {
+  const nextUser = currentUser?.username === 'maint1' ? 'maint2' : 'maint1';
+  switchStaff(nextUser);
+}
+
+async function loadAll() {
+  const [rows, summary] = await Promise.all([
+    api('/requests'),
+    api('/dashboard-summary').catch(() => ({ totalEmails: 0 }))
+  ]);
+  allRequests = rows;
+  const mine = allRequests.filter(r => r.assigned_to === currentUser.username);
+  const done = mine.filter(r => r.status === 'Closed');
+  const inProg = mine.filter(r => r.status === 'In Progress');
+  const openMine = mine.filter(r => r.status === 'Open');
+
+  document.getElementById('stats-row').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px">
+      <div class="card card-total"><div class="card-head"><span class="label">My Assignments</span><span class="icon-chip">🛠️</span></div><div class="num">${mine.length}</div></div>
+      <div class="card card-open"><div class="card-head"><span class="label">Pending Action</span><span class="icon-chip">⏳</span></div><div class="num">${openMine.length}</div></div>
+      <div class="card card-prog"><div class="card-head"><span class="label">In Progress</span><span class="icon-chip">⚡</span></div><div class="num">${inProg.length}</div></div>
+      <div class="card card-closed"><div class="card-head"><span class="label">Completed</span><span class="icon-chip">✅</span></div><div class="num">${done.length}</div></div>
+      <div class="card card-total" onclick="loadEmails()" style="border-left:4px solid #8b5cf6;cursor:pointer"><div class="card-head"><span class="label">Work Order Emails</span><span class="icon-chip">📧</span></div><div class="num">${summary.totalEmails || 0}</div><div class="hint">View dispatches</div></div>
+    </div>`;
+  return allRequests;
+}
+
+async function loadAssigned() {
+  setNav('nav-assigned');
+  document.getElementById('page-sub').textContent = 'Tickets assigned to you. Mark them as In Progress or Resolved when completed.';
+  document.getElementById('panel-title').textContent = 'My Assigned Tickets ';
+  document.getElementById('panel-actions').innerHTML = '';
+  const rows = await loadAll();
+  const mine = rows.filter(r => r.assigned_to === currentUser.username && r.status !== 'Closed');
+  renderRequests(mine, true);
+}
+
+async function loadAllOpen() {
+  setNav('nav-all');
+  document.getElementById('page-sub').textContent = 'All open campus maintenance requests (campus-wide view).';
+  document.getElementById('panel-title').textContent = 'All Open Campus Tickets ';
+  document.getElementById('panel-actions').innerHTML = '';
+  const rows = await loadAll();
+  renderRequests(rows.filter(r => r.status !== 'Closed'), false);
+}
+
+async function loadDone() {
+  setNav('nav-done');
+  document.getElementById('page-sub').textContent = 'Tickets you have completed and resolved.';
+  document.getElementById('panel-title').textContent = 'Completed Work Orders ';
+  document.getElementById('panel-actions').innerHTML = '';
+  const rows = await loadAll();
+  renderRequests(rows.filter(r => r.assigned_to === currentUser.username && r.status === 'Closed'), false, true);
+}
+
+async function loadEmails() {
+  setNav('nav-emails');
+  const pageSub = document.getElementById('page-sub');
+  if (pageSub) pageSub.textContent = 'Direct work order dispatch notices sent to your technician email (' + (currentUser?.email || 'maint1@campus.edu') + ').';
+  const statsRow = document.getElementById('stats-row');
+  if (statsRow) statsRow.innerHTML = '';
+  const panelTitle = document.getElementById('panel-title');
+  if (panelTitle) panelTitle.textContent = 'Work Order Email Notifications ';
+  const panelActions = document.getElementById('panel-actions');
+  if (panelActions) panelActions.innerHTML = `
+    <button class="add" style="background:#8b5cf6" onclick="sendTestEmail()">🚀 Test Email Dispatch</button>
+  `;
+  const reqsList = document.getElementById('requests-list');
+  if (reqsList) reqsList.innerHTML = '<div class="empty">Loading work order emails…</div>';
+
+  try {
+    const { emails, total } = await api('/email-logs');
+    myEmails = emails;
+    const reqCount = document.getElementById('req-count');
+    if (reqCount) reqCount.textContent = total + ' emails';
+
+    const rl = document.getElementById('requests-list');
+    if (!emails.length) {
+      if (rl) rl.innerHTML = `
+        <div class="email-service-banner" style="margin:20px">
+          <div class="email-service-status">
+            <span class="status-dot"></span>
+            <span>Technician Dispatch Email Service: <b>Active</b></span>
+          </div>
+          <button class="add" onclick="sendTestEmail()" style="padding:6px 14px;font-size:12px">Test Dispatch</button>
+        </div>
+        <div class="empty">No work order emails yet. When tickets are assigned to you by administration, dispatch notices will appear here!</div>`;
+      return;
+    }
+
+    if (rl) rl.innerHTML = `
+      <div style="padding:20px">
+        <div class="email-service-banner">
+          <div class="email-service-status">
+            <span class="status-dot"></span>
+            <span>Technician Email: <b>${esc(currentUser?.email || 'maint1@campus.edu')}</b></span>
+            <button class="action" onclick="promptUpdateEmail()" style="padding:4px 10px;font-size:11.5px;margin-left:8px">✏️ Change Email</button>
+          </div>
+          <button class="add" onclick="sendTestEmail()" style="padding:6px 14px;font-size:12px">Send Test Email</button>
+        </div>
+
+        <div style="border:1px solid #e2e8f4;border-radius:12px;overflow:hidden">
+          ${emails.map((em, idx) => `
+            <div class="email-log-item">
+              <div class="email-info" style="flex:1">
+                <h4>${esc(em.subject)}</h4>
+                <div class="email-meta">
+                  <span class="email-tag tag-assigned">WORK ORDER</span>
+                  <span>To: <b>${esc(em.recipient)}</b></span>
+                  <span>Status: <b style="color:#10b981">${esc(em.status)}</b></span>
+                  <span>🕒 ${new Date(em.created_at).toLocaleString()}</span>
+                </div>
+              </div>
+              <div>
+                <button class="btn-preview-email" onclick="viewEmailModal(${idx})">👁️ View Work Order</button>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  } catch (err) {
+    const rl2 = document.getElementById('requests-list');
+    if (rl2) rl2.innerHTML = `<div class="empty" style="color:#dc2626">Failed to load emails: ${esc(err.message)}</div>`;
+  }
+}
+
+async function sendTestEmail() {
+  try {
+    showToast('Sending test work order notice…', 'info');
+    const res = await api('/send-test-email', { method: 'POST', body: JSON.stringify({ username: currentUser.username }) });
+    showToast('Test email sent to ' + (res.user?.email || 'maint1@campus.edu'));
+    if (document.getElementById('nav-emails').classList.contains('active')) {
+      loadEmails();
+    }
+  } catch (err) {
+    alert('Test email error: ' + err.message);
+  }
+}
+
+async function promptUpdateEmail() {
+  const newEmail = prompt('Enter the email address where you want to receive work order dispatches:', currentUser.email || '');
+  if (!newEmail || !newEmail.includes('@')) return;
+  try {
+    const res = await api('/me/email', { method: 'PATCH', body: JSON.stringify({ email: newEmail.trim() }) });
+    currentUser.email = res.user.email;
+    showToast('Work order notification email updated to ' + res.user.email);
+    document.getElementById('maint-role-email').textContent = `🛠️ Staff · ${res.user.email}`;
+    loadEmails();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function viewEmailModal(idx) {
+  const em = myEmails[idx];
+  if (!em) return;
+  document.getElementById('em-modal-subject').textContent = em.subject;
+  document.getElementById('em-modal-to').textContent = `To: ${em.recipient} | Received: ${new Date(em.created_at).toLocaleString()}`;
+  document.getElementById('em-modal-body').innerHTML = `
+    <iframe srcdoc="${esc(em.body).replace(/"/g, '&quot;')}" style="width:100%;height:450px;border:none;"></iframe>
+  `;
+  document.getElementById('email-modal').style.display = 'grid';
+}
+function closeEmailModal() {
+  document.getElementById('email-modal').style.display = 'none';
+  document.getElementById('em-modal-body').innerHTML = '';
+}
+
+function renderRequests(rows, showComplete = false, resolved = false) {
+  const reqCount = document.getElementById('req-count');
+  if (reqCount) reqCount.textContent = rows.length + ' tickets';
+  if (!rows.length) {
+    const msg = resolved ? 'No completed tickets yet.' : 'No tickets assigned to you currently. Check back later!';
+    document.getElementById('requests-list').innerHTML = `<div class="empty" style="padding:48px"><div style="font-size:36px;margin-bottom:10px">📭</div><b>${msg}</b></div>`;
+    return;
+  }
+  document.getElementById('requests-list').innerHTML = `
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Ticket</th><th>Location</th><th>Priority</th><th>Reported By</th><th>Status</th>${showComplete?'<th>Action</th>':''}</tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>
+                <div class="title">#${r.id} · ${esc(r.title)}</div>
+                <div class="tiny">${icons[r.category]||'📌'} ${esc(r.category)} · ${timeAgo(r.created_at)}</div>
+                ${r.image_url ? `<button class="photo-btn" onclick="viewPhoto('${esc(r.image_url)}','${esc(r.title)}')">📷 View Problem Photo</button>` : '<div class="tiny" style="color:#94a3b8">No photo</div>'}
+              </td>
+              <td>📍 ${esc(r.location)}</td>
+              <td><span class="badge ${esc(r.priority)}">${esc(r.priority)}</span></td>
+              <td><b>${esc(r.requester)}</b></td>
+              <td><span class="badge ${esc(r.status)}">${esc(r.status)}</span></td>
+              ${showComplete ? `<td>
+                <div class="actions">
+                  ${r.status !== 'Closed' ? `
+                    <button class="action" onclick="updateStatus(${r.id},'In Progress')">⚡ Start Work</button>
+                    <button class="action" style="background:#ecfdf5;color:#047857;border-color:#bbf7d0" onclick="updateStatus(${r.id},'Closed')">✅ Mark Done</button>
+                  ` : '<span style="color:#059669;font-weight:700;font-size:13px">✅ Completed</span>'}
+                </div>
+              </td>` : ''}
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function updateStatus(id, newStatus) {
+  const msg = newStatus === 'Closed'
+    ? 'Mark this repair as COMPLETE? The requester will receive an automated resolution email.'
+    : 'Mark this ticket as In Progress?';
+  if (!confirm(msg)) return;
+  try {
+    await api('/requests/' + id, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+    showToast(newStatus === 'Closed' ? '✅ Ticket #' + id + ' resolved! Requester notified via email.' : '⚡ Ticket #' + id + ' marked In Progress.');
+    loadAssigned();
+  } catch (e) { alert(e.message); }
+}
+
+function viewPhoto(url, title) {
+  const win = window.open('', '_blank');
+  win.document.write(`<html><head><title>${esc(title)}</title><style>body{margin:0;background:#0e172e;display:grid;place-items:center;min-height:100vh}</style></head><body><img src="${esc(url)}" style="max-width:95vw;max-height:95vh;border-radius:10px;object-fit:contain"></body></html>`);
+}
+
+function setNav(id) {
+  document.querySelectorAll('.navitem').forEach(b => b.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+document.getElementById('nav-assigned').onclick = loadAssigned;
+document.getElementById('nav-all').onclick = loadAllOpen;
+document.getElementById('nav-done').onclick = loadDone;
+document.getElementById('nav-emails').onclick = loadEmails;
+document.getElementById('logout').onclick = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userRole');
+  window.location.href = '/';
+};
+
+checkAccess();
+</script>
+</body>
+</html>

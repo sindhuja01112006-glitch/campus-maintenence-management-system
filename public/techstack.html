@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Technology Stack | FixPoint - Campus Maintenance Management System</title>
+  <meta name="description" content="Full technology stack overview of FixPoint - Campus Maintenance Management System. Frontend, Backend, Database, Email Services, and Testing.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --font-display: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --navy: #050d1f;
+      --navy-surface: #111e3a;
+      --primary: #3b66ff;
+      --text-main: #f0f4ff;
+      --text-muted: #8899c4;
+      --text-subtle: #4e5f8a;
+      --border: rgba(255,255,255,0.07);
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 22px;
+      --radius-xl: 28px;
+      --shadow-card: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-body);
+      background: var(--navy);
+      color: var(--text-main);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(rgba(59,102,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(59,102,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px clamp(20px, 5vw, 80px);
+      background: rgba(5,13,31,0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand { font-family: var(--font-display); font-size: 26px; font-weight: 800; color: white; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+    .brand span {
+      background: linear-gradient(135deg, #60a5fa, #34d399);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-links { display: flex; gap: 6px; }
+    .nav-links a { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: white; background: var(--primary); }
+    .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; background: rgba(59,102,255,0.15); border: 1px solid rgba(59,102,255,0.4); border-radius: var(--radius-sm); color: #93c5fd; font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+    .btn-back:hover { background: var(--primary); color: white; }
+    .hero { position: relative; z-index: 1; padding: clamp(60px,10vh,120px) clamp(20px,5vw,80px) clamp(40px,6vh,80px); text-align: center; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 800px; height: 800px; background: radial-gradient(circle, rgba(59,102,255,0.18) 0%, transparent 60%); pointer-events: none; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; background: rgba(59,102,255,0.15); border: 1px solid rgba(59,102,255,0.35); border-radius: 30px; font-size: 12px; font-weight: 700; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 24px; }
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(40px,5.5vw,72px);
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1.05;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #ffffff 30%, #93c5fd 70%, #34d399 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p { color: var(--text-muted); font-size: clamp(15px,1.8vw,18px); max-width: 620px; margin: 0 auto 40px; line-height: 1.7; }
+    .hero-tags { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .tag { padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid; display: flex; align-items: center; gap: 6px; }
+    .tag-blue   { background: rgba(59,102,255,0.12);  border-color: rgba(59,102,255,0.35);  color: #93c5fd; }
+    .tag-green  { background: rgba(52,211,153,0.10);  border-color: rgba(52,211,153,0.3);   color: #6ee7b7; }
+    .tag-teal   { background: rgba(34,211,238,0.10);  border-color: rgba(34,211,238,0.3);   color: #67e8f9; }
+    .tag-purple { background: rgba(167,139,250,0.10); border-color: rgba(167,139,250,0.3);  color: #c4b5fd; }
+    .tag-orange { background: rgba(251,146,60,0.10);  border-color: rgba(251,146,60,0.3);   color: #fdba74; }
+    .container { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 0 clamp(20px,5vw,60px) 100px; }
+    .section-head { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+    .section-icon { width: 48px; height: 48px; border-radius: var(--radius-md); display: grid; place-items: center; font-size: 22px; flex-shrink: 0; }
+    .section-icon.blue   { background: rgba(59,102,255,0.2);   border: 1px solid rgba(59,102,255,0.35); }
+    .section-icon.green  { background: rgba(52,211,153,0.15);  border: 1px solid rgba(52,211,153,0.3); }
+    .section-icon.teal   { background: rgba(34,211,238,0.12);  border: 1px solid rgba(34,211,238,0.3); }
+    .section-icon.purple { background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); }
+    .section-icon.orange { background: rgba(251,146,60,0.12);  border: 1px solid rgba(251,146,60,0.3); }
+    .section-title h2 { font-family: var(--font-display); font-size: 26px; font-weight: 800; letter-spacing: -0.5px; color: white; }
+    .section-title p { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+    
+    .gradient-heading {
+      background: linear-gradient(135deg, #ffffff 40%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; margin-bottom: 60px; }
+    .tech-card { background: var(--navy-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px; box-shadow: var(--shadow-card); position: relative; overflow: hidden; transition: all 0.3s cubic-bezier(0.16,1,0.3,1); }
+    .tech-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--card-accent, var(--primary)); opacity: 0.7; }
+    .tech-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.12); box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 40px rgba(59,102,255,0.2); }
+    .tech-card-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+    .tech-logo { width: 52px; height: 52px; border-radius: var(--radius-sm); display: grid; place-items: center; font-size: 26px; flex-shrink: 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+    .tech-info h3 { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: white; }
+    .tech-info .tech-ver { font-size: 11px; font-weight: 700; font-family: var(--font-mono); color: var(--text-subtle); background: rgba(255,255,255,0.05); padding: 2px 7px; border-radius: 6px; display: inline-block; margin-top: 4px; }
+    .tech-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 14px; }
+    .code { font-family: var(--font-mono); color: #93c5fd; }
+    .tech-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tech-tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 8px; color: var(--text-muted); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); }
+    .arch-section { margin-bottom: 60px; }
+    .arch-flow { background: var(--navy-surface); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 40px; box-shadow: var(--shadow-card); overflow-x: auto; }
+    .flow-row { display: flex; align-items: center; justify-content: center; min-width: 640px; gap: 16px; }
+    .flow-node { flex: 1; max-width: 220px; text-align: center; padding: 22px 16px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); }
+    .flow-node .fn-icon { font-size: 28px; margin-bottom: 8px; }
+    .flow-node h4 { font-size: 15px; font-weight: 700; color: white; margin-bottom: 4px; }
+    .flow-node p { font-size: 12px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <a href="/" class="brand">Fix<span>Point</span></a>
+    <div class="nav-links">
+      <a href="/admin.html">Admin</a>
+      <a href="/student.html">Student</a>
+      <a href="/faculty.html">Faculty</a>
+      <a href="/maintenance.html">Maintenance</a>
+    </div>
+    <a href="/" class="btn-back">← Back to App</a>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-badge">Architecture & Infrastructure Overview</div>
+    <h1>Technology Stack</h1>
+    <p>A production-ready, full-stack architectural breakdown of the FixPoint Campus Maintenance Management System — from presentation interfaces to relational persistence and transactional email notifications.</p>
+    <div class="hero-tags">
+      <span class="tag tag-blue">Node.js (Express)</span>
+      <span class="tag tag-teal">MySQL Relational DB</span>
+      <span class="tag tag-green">Email Notification Engine</span>
+      <span class="tag tag-purple">Vanilla ES6 + CSS3</span>
+      <span class="tag tag-orange">Dockerized & Modular</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- 3-Tier Architecture Flow -->
+    <section class="arch-section">
+      <div class="section-head">
+        <div class="section-icon blue">🏗️</div>
+        <div class="section-title">
+          <h2 class="gradient-heading">3-Tier System Architecture</h2>
+          <p>Decoupled communication between frontend portals, RESTful Express application, and MySQL persistence</p>
+        </div>
+      </div>
+
+      <div class="arch-flow">
+        <div class="flow-row">
+          <div class="flow-node">
+            <div class="fn-icon">💻</div>
+            <h4>Presentation Layer</h4>
+            <p>Admin, Student, Faculty, & Maintenance Portals (HTML5/CSS3)</p>
+          </div>
+          <div style="font-size:24px;color:#60a5fa">⇄</div>
+          <div class="flow-node">
+            <div class="fn-icon">⚡</div>
+            <h4>Application Layer</h4>
+            <p>Node.js & Express REST API Router with Session Auth</p>
+          </div>
+          <div style="font-size:24px;color:#34d399">⇄</div>
+          <div class="flow-node">
+            <div class="fn-icon">📧</div>
+            <h4>Email Engine</h4>
+            <p>Direct SMTP Client & Transactional Audit Logs</p>
+          </div>
+          <div style="font-size:24px;color:#67e8f9">⇄</div>
+          <div class="flow-node">
+            <div class="fn-icon">🗄️</div>
+            <h4>Database Layer</h4>
+            <p>MySQL 8.0+ Relational Schema with Foreign Keys</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Backend & Services Grid -->
+    <div class="section-head">
+      <div class="section-icon green">⚙️</div>
+      <div class="section-title">
+        <h2>Core Technologies & Modules</h2>
+        <p>Reliable components powering real-time campus facility dispatch and resolution</p>
+      </div>
+    </div>
+
+    <div class="tech-grid">
+      <div class="tech-card" style="--card-accent:#3b66ff">
+        <div class="tech-card-top">
+          <div class="tech-logo">🟢</div>
+          <div class="tech-info">
+            <h3>Node.js & Express</h3>
+            <span class="tech-ver">v18+ · Express 4.x</span>
+          </div>
+        </div>
+        <p class="tech-desc">Asynchronous event-driven backend handling REST endpoints (<span class="code">/api/requests</span>, <span class="code">/api/notifications</span>, <span class="code">/api/email-logs</span>), CORS headers, and image file streaming.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">RESTful API</span>
+          <span class="tech-tag">Stateless Sessions</span>
+          <span class="tech-tag">High Concurrency</span>
+        </div>
+      </div>
+
+      <div class="tech-card" style="--card-accent:#0284c7">
+        <div class="tech-card-top">
+          <div class="tech-logo">🐬</div>
+          <div class="tech-info">
+            <h3>MySQL Database</h3>
+            <span class="tech-ver">v8.0+ · utf8mb4</span>
+          </div>
+        </div>
+        <p class="tech-desc">ACID-compliant relational database enforcing foreign key constraints across <span class="code">users</span>, <span class="code">requests</span>, <span class="code">notifications</span>, and <span class="code">email_logs</span> tables.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">Connection Pooling</span>
+          <span class="tech-tag">Prepared Statements</span>
+          <span class="tech-tag">Relational Integrity</span>
+        </div>
+      </div>
+
+      <div class="tech-card" style="--card-accent:#10b981">
+        <div class="tech-card-top">
+          <div class="tech-logo">📧</div>
+          <div class="tech-info">
+            <h3>Email Notification Service</h3>
+            <span class="tech-ver">Native TLS/Net · Built-in</span>
+          </div>
+        </div>
+        <p class="tech-desc">Native direct SMTP socket client with automatic fallback simulation. Dispatches confirmation emails to requesters, alerts to admins, and work orders to technicians.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">Zero External Libs</span>
+          <span class="tech-tag">HTML Templates</span>
+          <span class="tech-tag">Live Audit Logs</span>
+        </div>
+      </div>
+
+      <div class="tech-card" style="--card-accent:#a855f7">
+        <div class="tech-card-top">
+          <div class="tech-logo">🎨</div>
+          <div class="tech-info">
+            <h3>Modern Glassmorphic UI</h3>
+            <span class="tech-ver">CSS3 Variables · Vanilla JS</span>
+          </div>
+        </div>
+        <p class="tech-desc">Responsive, accessible frontend adhering to modern web design standards: dark mode, high contrast, smooth transitions, toast alerts, and modal previews without heavy framework bloat.</p>
+        <div class="tech-tags">
+          <span class="tech-tag">Vanilla JavaScript</span>
+          <span class="tech-tag">CSS Design Tokens</span>
+          <span class="tech-tag">Mobile Responsive</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

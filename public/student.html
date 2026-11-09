@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Student Portal | FixPoint</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- AUTH GUARD -->
+<div id="guard" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-page,#f6f8fc)">
+  <div style="background:white;border-radius:18px;padding:52px 40px;text-align:center;max-width:420px;width:90%;box-shadow:0 16px 40px -8px rgba(14,23,46,0.12);border:1px solid #e2e8f4">
+    <div style="font-size:52px;margin-bottom:16px">👨‍🎓</div>
+    <h2 style="font-size:22px;font-weight:800;color:#0e172e;margin-bottom:8px">Verifying Access…</h2>
+    <p style="color:#5e6d8a;font-size:14px">Checking your student credentials.</p>
+  </div>
+</div>
+
+<!-- STUDENT PORTAL -->
+<div id="student-app" style="display:none">
+  <div class="shell">
+    <aside class="side">
+      <div class="brand" style="padding:0 10px 28px">Fix<span>Point</span></div>
+      <div class="side-label">Student Menu</div>
+      <button class="navitem active" id="nav-dash">📋 My Complaints</button>
+      <button class="navitem" id="nav-new">➕ Report New Issue</button>
+      <button class="navitem" id="nav-notifs">🔔 Notifications <span id="nb-sidebar" style="display:none;background:#ef4444;color:white;font-size:10px;font-weight:800;padding:2px 6px;border-radius:10px;margin-left:4px"></span></button>
+      <button class="navitem" id="nav-emails">📧 Email Alerts</button>
+      <button class="logout" id="logout">🚪 Sign out</button>
+    </aside>
+
+    <main class="content">
+      <div class="top">
+        <div>
+          <h1 id="page-title">My Maintenance Requests</h1>
+          <p id="page-sub">Track your reported issues and receive real-time email notifications when resolved.</p>
+        </div>
+        <div class="avatar-badge">
+          <div class="avatar" id="stu-avatar">S</div>
+          <div class="avatar-info">
+            <span class="avatar-name" id="stu-name">Student</span>
+            <span class="avatar-role" id="stu-role-email">👨‍🎓 Student · student1@campus.edu</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div id="stats-row" style="margin-bottom:24px"></div>
+
+      <!-- Main panel -->
+      <section class="panel" id="main-panel">
+        <div class="panelhead">
+          <h2 id="main-panel-title">My Reported Issues <span class="panel-count" id="req-count"></span></h2>
+          <div id="panel-actions">
+            <button class="add" id="btn-new-req">➕ Report Issue</button>
+          </div>
+        </div>
+        <div id="requests-list"><div class="empty">Loading…</div></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- NEW REQUEST MODAL -->
+<div id="req-modal" style="display:none" class="modalback">
+  <form class="modal" id="req-form">
+    <h2>Report a Campus Issue</h2>
+    <div class="field">
+      <label>Issue Title *</label>
+      <input name="title" required maxlength="100" placeholder="e.g. Broken ceiling fan in hostel room">
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>Location *</label>
+        <input name="location" required placeholder="Block · Floor · Room">
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select name="category">
+          <option>Electrical</option><option>Plumbing</option><option>Furniture</option>
+          <option>HVAC</option><option>Cleaning</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Priority Level</label>
+      <select name="priority" style="max-width:200px">
+        <option>Low</option><option selected>Medium</option><option>High</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Problem Photo (Optional)</label>
+      <div class="file-dropzone" id="dropzone">
+        <span>📷 Click or tap to attach a photo of the problem</span>
+        <input type="file" id="photo_file" accept="image/*" capture="environment">
+      </div>
+      <div id="preview_area" style="display:none"></div>
+    </div>
+    <div class="field">
+      <label>Detailed Description *</label>
+      <textarea name="description" required placeholder="Describe the issue clearly — when you noticed it, exact location, any safety concerns."></textarea>
+    </div>
+    <p class="notice" id="modal-error" style="color:#ef4444;font-size:13px;display:none"></p>
+    <div class="modalfoot">
+      <button type="button" class="cancel" onclick="closeModal()">Cancel</button>
+      <button class="primary" id="submit-btn">Submit Complaint →</button>
+    </div>
+  </form>
+</div>
+
+<!-- EMAIL PREVIEW MODAL -->
+<div id="email-modal" style="display:none;position:fixed;inset:0;background:rgba(14,23,46,0.75);backdrop-filter:blur(5px);z-index:9999;place-items:center;padding:20px" onclick="closeEmailModal()">
+  <div class="email-frame-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid #e2e8f4;padding-bottom:12px">
+      <div>
+        <h3 id="em-modal-subject" style="font-size:16px;font-weight:700;color:#0e172e;margin-bottom:2px"></h3>
+        <p id="em-modal-to" style="font-size:12.5px;color:#5e6d8a;"></p>
+      </div>
+      <button class="cancel" onclick="closeEmailModal()" style="padding:6px 14px">✕ Close</button>
+    </div>
+    <div id="em-modal-body" style="border:1px solid #e2e8f4;border-radius:10px;overflow:hidden;background:#0b1329"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+const TOKEN_KEY = 'token';
+let token = localStorage.getItem(TOKEN_KEY) || '';
+let currentUser = null;
+let photoDataUrl = null;
+let myEmails = [];
+
+const api = async (url, opts = {}) => {
+  const res = await fetch('/api' + url, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, ...(opts.headers || {}) }
+  });
+  const d = await res.json();
+  if (!res.ok) throw new Error(d.error || 'Request failed');
+  return d;
+};
+
+const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icons = { Electrical:'⚡', Plumbing:'🚰', Furniture:'🪑', HVAC:'❄️', Cleaning:'🧹', General:'📌', Other:'🔧' };
+function timeAgo(d) { if(!d)return''; const s=Math.floor((new Date()-new Date(d))/1000); if(s<60)return'Just now'; const m=Math.floor(s/60); if(m<60)return m+'m ago'; const h=Math.floor(m/60); if(h<24)return h+'h ago'; return new Date(d).toLocaleDateString(); }
+
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${type==='success'?'✅':'ℹ️'}</span> <span>${esc(msg)}</span>`;
+  c.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(10px)'; t.style.transition='all 0.2s'; setTimeout(()=>t.remove(),200); },3500);
+}
+
+function showDenied(msg) {
+  document.getElementById('guard').innerHTML = `
+    <div style="background:white;border-radius:18px;padding:52px 40px;text-align:center;max-width:420px;width:90%;box-shadow:0 16px 40px -8px rgba(14,23,46,0.12);border:1px solid #fee2e2">
+      <div style="font-size:52px;margin-bottom:16px">🚫</div>
+      <h2 style="font-size:22px;font-weight:800;color:#dc2626;margin-bottom:10px">Access Denied</h2>
+      <p style="color:#5e6d8a;font-size:14px;line-height:1.6">${msg}<br><br>Please log in with a <b>student account</b>.</p>
+      <a href="/" style="display:inline-block;margin-top:20px;padding:12px 28px;background:#3b66ff;color:white;border-radius:8px;font-weight:700;text-decoration:none">← Back to Login</a>
+    </div>`;
+}
+
+async function checkAccess() {
+  if (!token) return showDenied('No active session found.');
+  try {
+    const { user } = await api('/me');
+    if (!user || user.role !== 'student') return showDenied(`You are signed in as <b>${user?.name || 'unknown'}</b> (${user?.role || 'unknown'}).<br>This portal is for students only.`);
+    currentUser = user;
+    document.getElementById('stu-avatar').textContent = user.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('stu-name').textContent = user.name;
+    document.getElementById('stu-role-email').textContent = `👨‍🎓 Student · ${user.email || user.username + '@campus.edu'}`;
+    document.getElementById('page-title').textContent = `Welcome, ${user.name.split(' ')[0]} 👋`;
+    document.getElementById('guard').style.display = 'none';
+    document.getElementById('student-app').style.display = 'block';
+    loadDashboard();
+    loadNotifCount();
+    setInterval(loadNotifCount, 15000);
+  } catch (e) {
+    showDenied('Session error. Please log in again.');
+  }
+}
+
+async function loadDashboard() {
+  setNav('nav-dash');
+  document.getElementById('page-sub').textContent = 'Track your reported issues and receive real-time email notifications when resolved.';
+  document.getElementById('main-panel-title').innerHTML = 'My Reported Issues <span class="panel-count" id="req-count"></span>';
+  document.getElementById('panel-actions').innerHTML = '<button class="add" id="btn-new-req" onclick="openModal()">➕ Report Issue</button>';
+
+  const [rows, summary] = await Promise.all([
+    api('/requests'),
+    api('/dashboard-summary').catch(() => ({ totalEmails: 0 }))
+  ]);
+
+  renderStats(rows, summary.totalEmails || 0);
+  renderRequests(rows);
+}
+
+function renderStats(rows, totalEmails = 0) {
+  const open = rows.filter(r=>r.status==='Open').length;
+  const prog = rows.filter(r=>r.status==='In Progress').length;
+  const closed = rows.filter(r=>r.status==='Closed').length;
+  document.getElementById('stats-row').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px">
+      <div class="card card-total"><div class="card-head"><span class="label">Total Submitted</span><span class="icon-chip">📋</span></div><div class="num">${rows.length}</div></div>
+      <div class="card card-open"><div class="card-head"><span class="label">Awaiting Action</span><span class="icon-chip">⏳</span></div><div class="num">${open}</div></div>
+      <div class="card card-prog"><div class="card-head"><span class="label">Being Fixed</span><span class="icon-chip">🛠️</span></div><div class="num">${prog}</div></div>
+      <div class="card card-closed"><div class="card-head"><span class="label">Resolved</span><span class="icon-chip">✅</span></div><div class="num">${closed}</div></div>
+      <div class="card card-total" onclick="loadEmails()" style="border-left:4px solid #3b82f6;cursor:pointer"><div class="card-head"><span class="label">Emails Received</span><span class="icon-chip">📧</span></div><div class="num">${totalEmails}</div><div class="hint">View inbox</div></div>
+    </div>`;
+}
+
+function renderRequests(rows) {
+  const reqCnt = document.getElementById('req-count');
+  if (reqCnt) reqCnt.textContent = rows.length + ' requests';
+  if (!rows.length) {
+    document.getElementById('requests-list').innerHTML = `
+      <div class="empty" style="padding:48px">
+        <div style="font-size:36px;margin-bottom:10px">📭</div>
+        <b>No complaints submitted yet.</b>
+        <p style="color:#5e6d8a;font-size:13px;margin-top:6px">Click <b>Report Issue</b> to submit your first campus maintenance request.</p>
+      </div>`;
+    return;
+  }
+  document.getElementById('requests-list').innerHTML = `
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Your Complaint</th><th>Location</th><th>Priority</th><th>Status</th><th>Assigned To</th><th>Submitted</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>
+                <div class="title">#${r.id} · ${esc(r.title)}</div>
+                <div class="tiny">${icons[r.category]||'📌'} ${esc(r.category)}</div>
+                ${r.image_url ? `<a href="${esc(r.image_url)}" target="_blank" class="photo-btn">📷 View Photo</a>` : ''}
+              </td>
+              <td>📍 ${esc(r.location)}</td>
+              <td><span class="badge ${esc(r.priority)}">${esc(r.priority)}</span></td>
+              <td><span class="badge ${esc(r.status)}">${esc(r.status)}</span></td>
+              <td>${r.assigned_to ? `<b>${esc(r.assigned_to)}</b>` : '<span style="color:#94a3b8">Unassigned</span>'}</td>
+              <td style="font-size:12px;color:#5e6d8a">${timeAgo(r.created_at)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function loadNotifications() {
+  setNav('nav-notifs');
+  document.getElementById('page-sub').textContent = 'In-app notification alerts for your reported campus tickets.';
+  document.getElementById('stats-row').innerHTML = '';
+  document.getElementById('main-panel-title').innerHTML = 'In-App Alerts <span class="panel-count" id="req-count"></span>';
+  document.getElementById('panel-actions').innerHTML = '';
+
+  const { notifications, unreadCount } = await api('/notifications');
+  const reqNotif = document.getElementById('req-count');
+  if (reqNotif) reqNotif.textContent = unreadCount + ' unread';
+
+  if (!notifications.length) {
+    document.getElementById('requests-list').innerHTML = '<div class="empty" style="padding:48px">🔔 No notifications yet. You\'re all caught up!</div>';
+    return;
+  }
+
+  document.getElementById('requests-list').innerHTML = `
+    <div style="padding:20px 0">
+      ${unreadCount > 0 ? `<div style="padding:0 24px 14px"><button class="action" onclick="markAllRead()">✓ Mark all as read</button></div>` : ''}
+      ${notifications.map(n => `
+        <div style="display:flex;gap:14px;align-items:flex-start;padding:16px 24px;border-bottom:1px solid #edf2f9;background:${n.read?'white':'#f0f5ff'};cursor:pointer" onclick="markRead(${n.id},this)">
+          <div style="font-size:22px;flex-shrink:0;margin-top:2px">${n.type==='resolved'?'✅':'🔔'}</div>
+          <div style="flex:1">
+            <div style="font-weight:700;color:#0e172e;margin-bottom:3px">${esc(n.title)}</div>
+            <div style="font-size:13px;color:#5e6d8a;line-height:1.5">${esc(n.message)}</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:5px">${timeAgo(n.created_at)}</div>
+          </div>
+          ${!n.read ? '<div style="width:9px;height:9px;background:#3b66ff;border-radius:50%;flex-shrink:0;margin-top:6px"></div>' : ''}
+        </div>`).join('')}
+    </div>`;
+}
+
+async function loadEmails() {
+  setNav('nav-emails');
+  document.getElementById('page-sub').textContent = 'Transactional emails dispatched to your registered address (' + (currentUser?.email || 'student1@campus.edu') + ').';
+  document.getElementById('stats-row').innerHTML = '';
+  document.getElementById('main-panel-title').innerHTML = 'My Email Inbox & Notification History <span class="panel-count" id="req-count"></span>';
+  document.getElementById('panel-actions').innerHTML = `
+    <button class="add" style="background:#0284c7" onclick="sendTestEmail()">🚀 Send Test Email</button>
+  `;
+
+  document.getElementById('requests-list').innerHTML = '<div class="empty">Loading your email notifications…</div>';
+
+  try {
+    const { emails, total } = await api('/email-logs');
+    myEmails = emails;
+    const reqEm = document.getElementById('req-count');
+    if (reqEm) reqEm.textContent = total + ' emails';
+
+    if (!emails.length) {
+      document.getElementById('requests-list').innerHTML = `
+        <div class="email-service-banner" style="margin:20px">
+          <div class="email-service-status">
+            <span class="status-dot"></span>
+            <span>Email Service is <b>Active</b> for ${esc(currentUser?.email || 'student1@campus.edu')}</span>
+          </div>
+          <button class="add" onclick="sendTestEmail()" style="padding:6px 14px;font-size:12px">Test Email</button>
+        </div>
+        <div class="empty">No emails delivered yet. When you submit a complaint or a repair is completed, you will receive email alerts here!</div>`;
+      return;
+    }
+
+    document.getElementById('requests-list').innerHTML = `
+      <div style="padding:20px">
+        <div class="email-service-banner">
+          <div class="email-service-status">
+            <span class="status-dot"></span>
+            <span>Registered Email: <b>${esc(currentUser?.email || 'student1@campus.edu')}</b></span>
+            <button class="action" onclick="promptUpdateEmail()" style="padding:4px 10px;font-size:11.5px;margin-left:8px">✏️ Change Email</button>
+          </div>
+          <button class="add" onclick="sendTestEmail()" style="padding:6px 14px;font-size:12px">Send Test Email</button>
+        </div>
+
+        <div style="border:1px solid #e2e8f4;border-radius:12px;overflow:hidden">
+          ${emails.map((em, idx) => {
+            const tagClass = em.event_type === 'ticket_created' ? 'tag-created'
+                           : em.event_type === 'ticket_assigned' ? 'tag-assigned'
+                           : em.event_type === 'ticket_resolved' ? 'tag-resolved' : 'tag-test';
+            return `
+              <div class="email-log-item">
+                <div class="email-info" style="flex:1">
+                  <h4>${esc(em.subject)}</h4>
+                  <div class="email-meta">
+                    <span class="email-tag ${tagClass}">${esc(em.event_type.replace('_',' '))}</span>
+                    <span>To: <b>${esc(em.recipient)}</b></span>
+                    <span>Status: <b style="color:#10b981">${esc(em.status)}</b></span>
+                    <span>🕒 ${new Date(em.created_at).toLocaleString()}</span>
+                  </div>
+                </div>
+                <div>
+                  <button class="btn-preview-email" onclick="viewEmailModal(${idx})">👁️ View Email</button>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  } catch (err) {
+    document.getElementById('requests-list').innerHTML = `<div class="empty" style="color:#dc2626">Failed to load emails: ${esc(err.message)}</div>`;
+  }
+}
+
+async function sendTestEmail() {
+  try {
+    showToast('Sending test email to your inbox…', 'info');
+    const res = await api('/send-test-email', { method: 'POST', body: JSON.stringify({ username: currentUser.username }) });
+    showToast('Test email sent to ' + (res.user?.email || 'student1@campus.edu'));
+    if (document.getElementById('nav-emails').classList.contains('active')) {
+      loadEmails();
+    }
+  } catch (err) {
+    alert('Test email error: ' + err.message);
+  }
+}
+
+async function promptUpdateEmail() {
+  const newEmail = prompt('Enter the email address where you want to receive real notifications:', currentUser.email || '');
+  if (!newEmail || !newEmail.includes('@')) return;
+  try {
+    const res = await api('/me/email', { method: 'PATCH', body: JSON.stringify({ email: newEmail.trim() }) });
+    currentUser.email = res.user.email;
+    showToast('Notification email updated to ' + res.user.email);
+    document.getElementById('stu-role-email').textContent = `👨‍🎓 Student · ${res.user.email}`;
+    loadEmails();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function viewEmailModal(idx) {
+  const em = myEmails[idx];
+  if (!em) return;
+  document.getElementById('em-modal-subject').textContent = em.subject;
+  document.getElementById('em-modal-to').textContent = `To: ${em.recipient} | Sent: ${new Date(em.created_at).toLocaleString()}`;
+  document.getElementById('em-modal-body').innerHTML = `
+    <iframe srcdoc="${esc(em.body).replace(/"/g, '&quot;')}" style="width:100%;height:450px;border:none;"></iframe>
+  `;
+  document.getElementById('email-modal').style.display = 'grid';
+}
+function closeEmailModal() {
+  document.getElementById('email-modal').style.display = 'none';
+  document.getElementById('em-modal-body').innerHTML = '';
+}
+
+async function loadNotifCount() {
+  const { unreadCount } = await api('/notifications');
+  const nb = document.getElementById('nb-sidebar');
+  if (unreadCount > 0) { nb.style.display = 'inline-block'; nb.textContent = unreadCount; }
+  else { nb.style.display = 'none'; }
+}
+
+async function markRead(id, el) {
+  await api('/notifications/' + id + '/read', { method: 'POST' });
+  el.style.background = 'white';
+  const dot = el.querySelector('div[style*="border-radius:50%"]');
+  if (dot) dot.remove();
+  loadNotifCount();
+}
+
+async function markAllRead() {
+  await api('/notifications/read-all', { method: 'POST', body: JSON.stringify({ username: currentUser.username }) });
+  showToast('All notifications marked as read');
+  loadNotifications();
+  loadNotifCount();
+}
+
+function setNav(id) {
+  document.querySelectorAll('.navitem').forEach(b => b.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+// NEW REQUEST MODAL
+document.getElementById('btn-new-req').onclick = openModal;
+document.getElementById('nav-new').onclick = openModal;
+
+function openModal() {
+  setNav('nav-new');
+  photoDataUrl = null;
+  document.getElementById('req-form').reset();
+  document.getElementById('preview_area').style.display = 'none';
+  document.getElementById('modal-error').style.display = 'none';
+  document.getElementById('req-modal').style.display = 'grid';
+}
+function closeModal() {
+  document.getElementById('req-modal').style.display = 'none';
+}
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('photo_file');
+dropzone.onclick = () => fileInput.click();
+fileInput.onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    photoDataUrl = ev.target.result;
+    document.getElementById('preview_area').style.display = 'block';
+    document.getElementById('preview_area').innerHTML = `
+      <div class="preview-wrap">
+        <img src="${photoDataUrl}" alt="Preview">
+        <div class="info"><b>${esc(file.name)}</b> · ${(file.size/1024).toFixed(0)} KB</div>
+        <button type="button" class="remove-photo" onclick="removePhoto()">Remove</button>
+      </div>`;
+  };
+  reader.readAsDataURL(file);
+};
+window.removePhoto = () => { photoDataUrl = null; fileInput.value = ''; document.getElementById('preview_area').style.display = 'none'; };
+
+document.getElementById('req-form').onsubmit = async e => {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  btn.textContent = 'Submitting…'; btn.disabled = true;
+  const payload = Object.fromEntries(new FormData(e.target));
+  if (photoDataUrl) payload.image = photoDataUrl;
+  try {
+    const created = await api('/requests', { method: 'POST', body: JSON.stringify(payload) });
+    closeModal();
+    showToast('Complaint #' + created.id + ' submitted! Confirmation email sent to your inbox.');
+    loadDashboard();
+  } catch (err) {
+    const errEl = document.getElementById('modal-error');
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.textContent = 'Submit Complaint →'; btn.disabled = false;
+  }
+};
+
+document.getElementById('nav-dash').onclick = loadDashboard;
+document.getElementById('nav-notifs').onclick = loadNotifications;
+document.getElementById('nav-emails').onclick = loadEmails;
+document.getElementById('logout').onclick = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userRole');
+  window.location.href = '/';
+};
+
+document.getElementById('req-modal').onclick = e => { if (e.target === e.currentTarget) closeModal(); };
+
+checkAccess();
+</script>
+</body>
+</html>
