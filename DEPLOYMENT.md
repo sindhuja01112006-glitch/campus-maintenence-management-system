@@ -4,71 +4,62 @@ This guide walks you through deploying the application and MySQL database to the
 
 ---
 
-## 🚀 Option 1: Railway (Recommended — Fastest 1-Click Setup)
+## 🚀 Option 1: Railway (Recommended — Fastest Setup)
 
-Railway allows you to run both the **Node.js application** and a managed **MySQL database** within the same project.
+Railway runs the **Node.js application** and a managed **MySQL database** in one project.
 
-### Step 1: Push Project to GitHub
-1. Create a new repository on [GitHub](https://github.com).
-2. Push your project code (the `.gitignore` automatically excludes `node_modules` and `.env`).
-
-### Step 2: Create a Railway Project
+### Step 1: Create a Railway project and MySQL database
 1. Log in to [railway.app](https://railway.app) using GitHub.
-2. Click **+ New Project** → **Provision MySQL**.
-   - Railway will instantly spin up a managed MySQL database and generate connection variables (`MYSQLHOST`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`, `MYSQLPORT`, `MYSQL_URL`).
+2. Create a new project and add a **MySQL** service.
+3. Railway generates database connection variables, including `MYSQLHOST`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`, `MYSQLPORT`, and `MYSQL_URL`.
 
-### Step 3: Deploy the Node.js Service
-1. In the same Railway project canvas, click **+ Create** → **GitHub Repo**.
-2. Select your repository.
-3. Railway automatically detects Node.js and starts building.
+### Step 2: Deploy the Node.js service
+1. In the same Railway project, add a **GitHub Repo** service.
+2. Select `sindhuja01112006-glitch/campus-maintenence-management-system`.
+3. Railway detects Node.js and uses the `npm start` script (`node server.js`).
 
-### Step 4: Connect Database to the App
-1. Click on your deployed web service in Railway.
-2. Go to the **Variables** tab.
-3. Click **Add Reference** and select the MySQL service variables (or add `DATABASE_URL` referencing `${{MySQL.MYSQL_URL}}`).
-4. Under **Settings** → **Networking**, click **Generate Domain** to get your public HTTPS URL (e.g. `https://campus-maintenance.up.railway.app`).
+### Step 3: Connect the app to MySQL
+In the app service's **Variables** tab, add a reference to the MySQL service's `MYSQL_URL` as `DATABASE_URL` (for example, `${{MySQL.MYSQL_URL}}`). The app also supports the individual `MYSQLHOST`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`, and `MYSQLPORT` variables.
 
-### Step 5: Seed the Database
-In Railway, open your web service → **Deployments** → **View Logs** or click the **Command Palette (Ctrl+K) / Terminal** tab:
+### Step 4: Initialize the database once
+After the MySQL service is running and its variables are available to the app service, run this command once in the app service's shell/terminal:
+
 ```bash
 npm run db:init
 ```
-This automatically creates all tables and populates default accounts (`admin`, `student1`, `faculty1`, etc.).
+
+This creates the tables and inserts demo users and sample requests. The server's startup migration only adjusts a few columns/tables; it does **not** create the entire database schema, so this initialization step is required for a fresh database.
+
+### Step 5: Generate a public domain
+In the app service, go to **Settings → Networking** and generate a domain. Railway provides the public HTTPS URL.
+
+### Step 6: Optional email configuration
+Email delivery is simulated and logged to MySQL when SMTP settings are not configured. To enable SMTP, add `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` to the app service variables.
 
 ---
 
-## 🌐 Option 2: Render + TiDB Cloud / Aiven (Free Tier)
+## 🌐 Option 2: Render + TiDB Cloud / Aiven
 
-### Step 1: Create Free Cloud MySQL
-1. Sign up for [TiDB Cloud Serverless](https://tidbcloud.com/) or [Aiven MySQL](https://aiven.io/) (free tiers).
-2. Create a MySQL cluster and copy the connection string:
+### Step 1: Create a cloud MySQL database
+1. Sign up for [TiDB Cloud Serverless](https://tidbcloud.com/) or [Aiven MySQL](https://aiven.io/).
+2. Create a MySQL cluster and copy its connection string:
    `mysql://username:password@host:port/database`
 
-### Step 2: Deploy Web Service on Render
+### Step 2: Deploy the web service on Render
 1. Sign up on [render.com](https://render.com).
-2. Click **New +** → **Web Service**.
-3. Connect your GitHub repository.
-4. Set:
-   - **Environment**: `Node`
-   - **Build Command**: `npm install`
-   - **Start Command**: `node initDb.js && node server.js`
-5. In **Environment Variables**, add:
-   - `DATABASE_URL`: `mysql://username:password@host:port/database`
-   - `DB_SSL`: `true`
-   - `PORT`: `3000`
-6. Click **Deploy Web Service**.
+2. Create a **Web Service** and connect the GitHub repository.
+3. Set the build command to `npm install` and the start command to `npm start`.
+4. Add `DATABASE_URL` with the MySQL connection string. Add `DB_SSL=true` if required by your provider.
+5. Deploy the service, then run `npm run db:init` once from the service shell to create and seed the database.
 
 ---
 
 ## 🐳 Option 3: Docker Deployment
 
-A `Dockerfile` is already provided in the repository root.
+A `Dockerfile` is provided in the repository root.
 
 ```bash
-# Build Docker image
 docker build -t campus-maintenance .
-
-# Run Docker container
 docker run -p 3000:3000 \
   -e DB_HOST=your-mysql-host \
   -e DB_USER=your-user \
@@ -77,9 +68,13 @@ docker run -p 3000:3000 \
   campus-maintenance
 ```
 
+Initialize the database separately with `npm run db:init` after the database is available.
+
 ---
 
-## 🔑 Default Login Credentials
+## 🔑 Demo Login Credentials
+
+These credentials are for local/demo use only. Change or remove them before making a public production deployment.
 
 | Role | Username | Password | Email |
 | :--- | :--- | :--- | :--- |
@@ -88,4 +83,3 @@ docker run -p 3000:3000 \
 | **Faculty** | `faculty1` | `pass` | `faculty1@campus.edu` |
 | **Maintenance** | `maint1` | `pass` | `maint1@campus.edu` |
 | **Maintenance** | `maint2` | `pass` | `maint2@campus.edu` |
-
